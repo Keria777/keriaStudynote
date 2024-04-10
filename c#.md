@@ -167,7 +167,7 @@ public class ThreadDemo
 
 **LINQ (Language Integrated Query)** 是一种查询语法，用于对数组、集合等数据源进行查询。
 
-#### 示例：Lambda 表达式和 LINQ
+示例：Lambda 表达式和 LINQ
 
 ```
 using System;
