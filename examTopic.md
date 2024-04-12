@@ -103,3 +103,113 @@
 可以看到数据也被成功的添加了进去
 
 ![image-20240411093539455](assets/image-20240411093539455.png)
+
+
+
+# ASP.NET Core 数据绑定特性
+
+在ASP.NET Core中，有多种特性可以用来指定HTTP请求中数据的来源。这些特性帮助开发者明确每个参数应如何被解析和绑定，从而使控制器代码更清晰、易于维护。
+
+## 1. FromQuery 特性
+
+- **用途**：从请求的查询字符串中提取参数值。
+- **常用场景**：通常用于GET请求，这些请求的参数通过查询字符串传递。
+- **示例**：
+  
+  ```csharp
+  [HttpGet]
+  public IActionResult GetData([FromQuery] string parameter1, [FromQuery] int parameter2) {
+      // 访问 /api/data?parameter1=keria777&parameter2=777
+  }
+
+## 2. FromBody 特性
+
+- **用途**：从请求体中提取参数值。
+
+- **常用场景**：用于POST、PUT、DELETE等请求，这些请求通过请求体传递参数。
+
+- 示例
+
+  ：
+
+  ```
+  csharpCopy code
+  [HttpPost]
+  public IActionResult PostData([FromBody] SomeModel model) {
+      // 请求体包含 JSON: { "property1": "keira777", "property2": 777 }
+  }
+  ```
+
+## 3. FromRoute 特性
+
+- **用途**：从请求的URL路由中提取参数值。
+
+- **常用场景**：适用于RESTful API，参数直接嵌入在URL中。
+
+- 示例
+
+  ：
+
+  ```
+  csharpCopy code
+  [HttpGet("api/{id}")]
+  public IActionResult GetById([FromRoute] int id) {
+      // 访问 /api/777
+  }
+  ```
+
+## 4. FromHeader 特性
+
+- **用途**：从请求的头部中提取参数值。
+
+- **常用场景**：适用于需要从HTTP头部获取信息的场景，如认证。
+
+- 示例
+
+  ：
+
+  ```
+  csharpCopy code
+  [HttpGet]
+  public IActionResult GetByHeader([FromHeader] string authorization) {
+      // 请求头包含 Authorization: Bearer tokenabc
+  }
+  ```
+
+## 5. FromForm 特性
+
+- **用途**：从表单数据中提取参数值。
+
+- **常用场景**：用于POST请求中的表单提交。
+
+- 示例
+
+  ：
+
+  ```
+  csharpCopy code
+  [HttpPost]
+  public IActionResult PostFormData([FromForm] string username, [FromForm] string password) {
+      // 表单数据为 username=keria&password=777
+  }
+  ```
+
+## 6. FromServices 特性
+
+- **用途**：从服务容器中自动注入服务实例。
+
+- **常用场景**：适用于需要依赖注入服务实例的操作，如使用日志记录。
+
+- 示例
+
+  ：
+
+  ```
+  csharpCopy code
+  [HttpGet]
+  public IActionResult GetFromService([FromServices] ILogger<MyController> logger) {
+      // 使用注入的ILogger<MyController>
+  }
+  ```
+
+通过使用这些特性，开发者可以确保控制器方法的参数正确地绑定来自HTTP请求的各种数据，从而提高了应用的安全性和效率。

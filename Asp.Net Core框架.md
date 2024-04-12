@@ -37,6 +37,8 @@ public void Configure(IApplicationBuilder app)
 
 ## 自定义中间件
 
+### 第一个自定义中间件
+
 在 ASP.NET Core 中，创建自定义中间件可以执行特定的功能，比如日志记录、异常处理、请求验证等，这些功能会在请求处理管道中的一个特定点执行。
 
 自定义中间件类通常包含以下三个核心部分：
@@ -87,6 +89,89 @@ public class MyMiddleware
 >   - **路由中间件**（`UseRouting`）应在定义了路由处理逻辑（如 `UseAuthentication`, `UseAuthorization`, 和 `UseEndpoints`）之前执行，这样后续中间件才能知道请求应由哪个路由处理。
 > - **异步处理**：中间件的 `InvokeAsync` 方法应该是异步的，这有助于提高应用程序处理并发请求的能力。
 > - **异常处理**：自定义中间件应适当处理异常，以避免中间件内部错误影响到整个请求处理流程。
+
+
+
+### 全局异常捕获中间件
+
+```
+using System.Net;
+
+namespace AspNetCore;
+
+public class ExceptionHandlingMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly ILogger<ExceptionHandlingMiddleware> _logger;
+
+    public ExceptionHandlingMiddleware(RequestDelegate next,ILogger<ExceptionHandlingMiddleware> logger)
+    {
+        _next = next;
+        _logger = logger;
+    }
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        try
+        {
+            await _next(context); // 尝试执行下一个中间件
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,"error occurred");
+            await HandleExceptionAsync(context, ex); // 处理捕获的异常
+        }
+    }
+
+    private static Task HandleExceptionAsync(HttpContext context, Exception exception)
+    {
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+
+        // 这里可以根据不同的异常类型来返回不同的消息或状态码
+        var response = new
+        {
+            StatusCode = context.Response.StatusCode,
+            Message = "Internal Server Error from the custom middleware.",
+            DetailedError = exception.Message // 在生产环境中应谨慎输出详细错误信息
+        };
+
+        return context.Response.WriteAsync(Newtonsoft.Json.JsonConvert.SerializeObject(response));
+    }
+}
+```
+
+第二步，注册中间件
+
+```
+ //注册自定义的异常处理中间件
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
+            
+            app.UseHttpsRedirection();
+            app.UseStaticFiles();
+
+            //注册自定义中间件
+            //app.UseMiddleware<MyMiddleware>();
+            
+            //认证，路由等其他中间件
+            app.UseRouting();
+            //添加身份验证中间件
+            app.UseAuthentication();
+            app.UseAuthorization();
+            
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
+            });
+```
+
+把全局异常处理中间件尽可能放在前面，这样就可以确保后面的程序部分出错时，都能被全局异常处理中间件捕获。
+
+效果图：
+
+![image-20240412094846599](assets/image-20240412094846599.png)
 
 
 
