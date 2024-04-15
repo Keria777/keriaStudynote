@@ -54,7 +54,6 @@ DI：
 这是 Autofac 中最基本的生命周期管理策略之一。当你注册一个组件时，可以指定它应该每个生命周期作用域 (Lifetime Scope) 产生一个新实例。这意味着，每次通过一个特定的生命周期作用域解析组件时，都会得到一个新的实例，但在同一生命周期作用域内解析多次时，将返回相同的实例。
 
 ```
-csharpCopy code
 builder.RegisterType<MyService>().InstancePerLifetimeScope();
 ```
 
@@ -65,7 +64,6 @@ builder.RegisterType<MyService>().InstancePerLifetimeScope();
 在这个生命周期中，注册的组件在第一次被解析时创建一个实例，之后不论在哪个生命周期作用域中解析，都会返回这个相同的实例。这适用于那些状态不变、共享的服务。
 
 ```
-csharpCopy code
 builder.RegisterType<MySingletonService>().SingleInstance();
 ```
 
@@ -76,7 +74,6 @@ builder.RegisterType<MySingletonService>().SingleInstance();
 每次请求解析时，都会创建一个新的组件实例。这种模式类似于无状态服务，每次使用都是全新的，不会有状态被保留。
 
 ```
-csharpCopy code
 builder.RegisterType<MyTransientService>().InstancePerDependency();
 ```
 
@@ -87,7 +84,6 @@ builder.RegisterType<MyTransientService>().InstancePerDependency();
 可以指定组件实例应当在某些特定的生命周期作用域下创建和存在。这在你有多层作用域，例如在一个Web请求中有多个子作用域时非常有用。
 
 ```
-csharpCopy code
 builder.RegisterType<MyScopedService>().InstancePerMatchingLifetimeScope("myScope");
 ```
 
@@ -98,7 +94,6 @@ builder.RegisterType<MyScopedService>().InstancePerMatchingLifetimeScope("myScop
 有时你可能需要每次解析时创建一个新的实例，但这些实例共享一些相同的依赖。这可以通过 `Owned<T>` 实现，这样可以保持依赖对象的共享，而服务本身每次都是新的。
 
 ```
-csharpCopy code
 builder.RegisterType<MyService>().AsSelf();
 builder.Register(c => new MyComponent(c.Resolve<Owned<MyService>>()));
 ```
