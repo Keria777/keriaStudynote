@@ -21,8 +21,10 @@ DI：
 # AutoFac的一些理解
 
 - 在 Java 生态系统中，与 AutoFac 类似的依赖注入框架是 Spring Framework 的一部分，特别是 Spring DI（依赖注入）模块。Spring Framework 提供了广泛的依赖注入功能，通过它可以定义和管理应用程序中对象之间的依赖关系。
+
 - 在 Java 中的 Bean 类似于 AutoFac 里的“组件”（Component）。在 AutoFac 中，组件是被注册到依赖注入容器中的对象，通常是服务或实例的实现。这些组件是应用程序中的基本构建块，容器负责创建和管理它们的生命周期。
-- 
+
+  
 
 ### Spring Framework 和 AutoFac 的相似之处：
 
@@ -63,7 +65,7 @@ builder.RegisterType<MyService>().InstancePerLifetimeScope();
 
 在这个生命周期中，注册的组件在第一次被解析时创建一个实例，之后不论在哪个生命周期作用域中解析，都会返回这个相同的实例。这适用于那些状态不变、共享的服务。
 
-```
+```c#
 builder.RegisterType<MySingletonService>().SingleInstance();
 ```
 
@@ -73,7 +75,7 @@ builder.RegisterType<MySingletonService>().SingleInstance();
 
 每次请求解析时，都会创建一个新的组件实例。这种模式类似于无状态服务，每次使用都是全新的，不会有状态被保留。
 
-```
+```c#
 builder.RegisterType<MyTransientService>().InstancePerDependency();
 ```
 
@@ -83,7 +85,7 @@ builder.RegisterType<MyTransientService>().InstancePerDependency();
 
 可以指定组件实例应当在某些特定的生命周期作用域下创建和存在。这在你有多层作用域，例如在一个Web请求中有多个子作用域时非常有用。
 
-```
+```c#
 builder.RegisterType<MyScopedService>().InstancePerMatchingLifetimeScope("myScope");
 ```
 
@@ -93,7 +95,7 @@ builder.RegisterType<MyScopedService>().InstancePerMatchingLifetimeScope("myScop
 
 有时你可能需要每次解析时创建一个新的实例，但这些实例共享一些相同的依赖。这可以通过 `Owned<T>` 实现，这样可以保持依赖对象的共享，而服务本身每次都是新的。
 
-```
+```c#
 builder.RegisterType<MyService>().AsSelf();
 builder.Register(c => new MyComponent(c.Resolve<Owned<MyService>>()));
 ```
@@ -104,7 +106,7 @@ builder.Register(c => new MyComponent(c.Resolve<Owned<MyService>>()));
 
 ## 单例和每次请求实践
 
-```
+```c#
 using Autofac;
 using AutoFac_04_15.Models;
 
@@ -147,13 +149,13 @@ using (var scope = container.BeginLifetimeScope())
 
 ## 注册依赖时As（）和AsSelf的区别
 
-```
+```c#
 builder.RegisterType<SomeType>().As<IService>();
 ```
 
 这行代码将`SomeType`注册为通过`IService`接口进行解析。这意味着当依赖注入系统需要一个`IService`实例时，它将创建一个`SomeType`的实例来满足这个需求。在这种情况下，如果不能直接解析`SomeType，因为`SomeType`没有被注册为可以直接解析的类型，只能通过`IService`接口来解析。
 
-```
+```c#
 builder.RegisterType<SomeType>().AsSelf().As<IService>();
 ```
 
@@ -174,7 +176,7 @@ builder.RegisterType<SomeType>().AsSelf().As<IService>();
 
 如果多个组件公开相同的服务，**Autofac 将使用最后注册的组件作为该服务的默认提供者**：
 
-```
+```c#
 builder.RegisterType<ConsoleLogger>().As<ILogger>();
 builder.RegisterType<FileLogger>().As<ILogger>();
 ```
@@ -183,7 +185,7 @@ builder.RegisterType<FileLogger>().As<ILogger>();
 
 要覆盖此行为，请使用`PreserveExistingDefaults()`修饰符：
 
-```
+```c#
 builder.RegisterType<ConsoleLogger>().As<ILogger>();
 builder.RegisterType<FileLogger>().As<ILogger>().PreserveExistingDefaults();
 ```
@@ -196,7 +198,7 @@ builder.RegisterType<FileLogger>().As<ILogger>().PreserveExistingDefaults();
 
 Autofac 可以使用约定来查找和注册程序集中的组件。可以扫描并注册单个类型，也可以专门扫描Autofac 模块。
 
-```
+```c#
 var dataAccess = Assembly.GetExecutingAssembly();
 //这行代码获取了当前执行程序集（即当前代码所在的程序集）的 Assembly 对象。这个对象将被用来指定要注册的类型所在的程序集。
 
@@ -221,7 +223,7 @@ AsImplementedInterfaces 方法，表示注册的每个类型应该实现的接�
 
 可以使用装配扫描来自动注册这些服务类。示例代码如下：
 
-```
+```c#
 var assembly = typeof(SomeService).Assembly;
 
 var builder = new ContainerBuilder();
@@ -245,7 +247,7 @@ builder.RegisterAssemblyTypes(assembly)
 
 首先，定义一个 `ConfigReader` 类，它具有一个带有 `configSectionName` 参数的构造函数。这个构造函数用来接收配置节的名称，并在实例化时将其存储起来。
 
-```
+```c#
 public class ConfigReader : IConfigReader
 {
   public ConfigReader(string configSectionName)
@@ -259,7 +261,7 @@ public class ConfigReader : IConfigReader
 
 可以将参数传递给`Resolve()`调用，如下所示：
 
-```
+```c#
 var reader = scope.Resolve<ConfigReader>(new NamedParameter("configSectionName", "sectionName"));
 ```
 
@@ -267,7 +269,7 @@ var reader = scope.Resolve<ConfigReader>(new NamedParameter("configSectionName",
 
 如果您有多个参数，只需通过以下`Resolve()`方法将它们全部传入：
 
-```
+```c#
 var service = scope.Resolve<AnotherService>(
                 new NamedParameter("id", "service-identifier"),
                 new TypedParameter(typeof(Guid), Guid.NewGuid()),
@@ -299,7 +301,7 @@ var service = scope.Resolve<AnotherService>(
 
 在这种情况下，可以使用延迟实例化来实现懒加载用户信息的功能。示例代码如下：
 
-```
+```c#
 public class UserProfilePage
 {
     private readonly Lazy<UserService> _userService;
@@ -343,7 +345,7 @@ public class UserInfo
 
 在这种情况下，可以使用受控生命周期来管理定时器对象。示例代码如下：
 
-```
+```c#
 public class MyService : IDisposable
 {
     private readonly Timer _timer;
@@ -379,7 +381,7 @@ public class MyService : IDisposable
 
 假设开发一个游戏，游戏中有不同类型的敌人，每种敌人都有自己的特点和行为。在这种情况下，你可以使用动态实例化来根据不同的条件（比如玩家等级、游戏进度等）创建不同类型的敌人。
 
-```
+```c#
 public class EnemySpawner
 {
     private readonly Func<PlayerLevel, IEnemy> _enemyFactory;
@@ -448,7 +450,7 @@ public class AdvancedEnemy : IEnemy
 
 以下是一个示例代码：
 
-```
+```c#
 public enum LogLevel
 {
     Info,
@@ -521,7 +523,7 @@ public class LogManager
 
 假设正在开发一个插件系统，允许用户编写自定义插件来扩展应用程序的功能。每个插件都实现了一个特定的接口，并且主应用程序需要加载并使用所有已注册的插件。以下是示例代码：
 
-```
+```c#
 // 插件接口
 public interface IPlugin
 {
@@ -581,7 +583,7 @@ public class Application
 
 以下是示例代码：
 
-```
+```c#
 csharpCopy code
 // 插件接口
 public interface IPlugin
@@ -665,7 +667,7 @@ public class Application
 
 以下是一个简单的示例：
 
-```
+```c#
 // 设备接口
 public interface IDevice
 {
@@ -755,7 +757,7 @@ public class Application
 - **用法**：在应用程序启动时使用，通常不会在应用程序的其他部分使用。
 - **示例**：使用 AutoFac 的 `ContainerBuilder` 来注册服务和创建容器。
 
-```
+```c#
 var builder = new ContainerBuilder();
 builder.RegisterType<SomeService>().As<IService>();
 var container = builder.Build();  // 创建容器
@@ -769,7 +771,7 @@ var container = builder.Build();  // 创建容器
 - **用法**：在需要服务实例时使用，比如在请求处理或对象创建时。
 - **示例**：使用 AutoFac 的容器来解析服务。
 
-```
+```c#
 var service = container.Resolve<IService>();  // 从容器获取服务实例
 ```
 
@@ -793,7 +795,7 @@ var service = container.Resolve<IService>();  // 从容器获取服务实例
 
 2.创建接口 `ILogService` 和实现类 `LogService`
 
-```
+```c#
 public interface ILogService
 {
     void Log(string message);
@@ -810,7 +812,7 @@ public class LogService : ILogService
 
 3.配置AutoFac容器，在其中注入依赖关系
 
-```
+```c#
 using Autofac;
 
 public class ContainerConfig
@@ -833,7 +835,7 @@ public class ContainerConfig
 
 在应用程序启动程序中，使用容器来解析依赖并使用他们
 
-```
+```c#
 using Autofac;
 
 class Program
