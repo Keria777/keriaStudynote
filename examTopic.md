@@ -1,3 +1,106 @@
+
+
+# 
+
+# 项目架构笔记
+
+## 概述
+本文档旨在提供关于项目中三个主要模块：Core模块、API模块和Message模块的详细描述和理解。每个模块的职责将被清晰地界定，以支持项目的可维护性和扩展性。
+
+## API模块
+
+### 职责
+
+- **请求处理**：接收外部的请求并返回响应。
+- **身份验证和授权**：确保API请求的安全性。
+
+### 组件
+
+- **Controllers**：处理进入的HTTP请求，调用Core模块的服务。
+
+```c#
+[ApiController]
+[Route("[controller]")]
+public class ProductsController : ControllerBase {
+    private readonly IProductService _productService;
+
+    public ProductsController(IProductService productService) {
+        _productService = productService;
+    }
+    
+    [HttpGet("{id}")]
+    public ActionResult<Product> GetProduct(int id) {
+        var product = _productService.GetProductById(id);
+        if (product == null) {
+            return NotFound();
+        }
+        return Ok(product);
+    }
+
+}
+```
+
+
+
+## Core模块
+
+### 职责
+- **业务逻辑处理**：实现应用程序的核心业务逻辑。
+- **数据持久化**：管理所有数据库交互，包括数据的CRUD操作。
+- **领域模型定义**：定义业务领域内的实体和它们的行为。
+
+### 组件
+- **Domain**：包含所有领域实体和领域服务。
+- **Services**：业务逻辑的实现地，服务层包含应用程序的主要功能。
+- **Data**：数据访问层，包括数据库模型和仓库实现。
+- **DbUp**：负责数据库迁移和版本控制。
+- **Handler**：处理业务逻辑的执行，如命令和查询的处理器。
+- **Mapping**：负责数据转换和对象映射的设置，通常用于Domain对象与DTO或视图模型的转换。
+- **Settings**：应用程序的配置设置，可能包括数据库连接字符串等。
+- **EnumS**：定义在整个应用程序中使用的枚举类型。
+
+### 示例代码
+```csharp
+public class ProductService : IProductService {
+    private readonly IRepository<Product> _productRepository;
+
+    public ProductService(IRepository<Product> productRepository) {
+        _productRepository = productRepository;
+    }
+
+    public Product GetProductById(int id) {
+        return _productRepository.FindById(id);
+    }
+}
+```
+
+
+
+## Message模块
+
+### 职责
+
+- **数据传输**：定义和使用数据传输对象（DTOs）来传递数据。
+- **消息传递**：处理和传递消息队列中的消息。
+
+### 组件
+
+- **DTOs**：数据传输对象，用于封装从API传输到客户端的数据。
+
+- **Commands**、**Events**、**Requests**：处理应用程序内部的命令、事件和请求的定义，这些通常涉及业务操作的触发和处理。
+
+- **Responses**：定义API或服务对外部请求的响应结构。
+
+- **MiddleWares**：中间件组件，处理HTTP请求的流，如身份验证、错误处理等。
+
+- **Extensions**：扩展方法集，常用于跨多个模块共享的功能，如HTTP上下文、依赖注入容器配置等。
+
+- **Attributes**：自定义属性，可能用于控制访问、路由配置等。
+
+- **Bo**：业务对象，用于在业务层和表示层之间传递数据，可以视具体情况决定放置于 Core 或 Message。
+
+  
+
 # 参考考核项目时遇到的问题
 
 ## 1.问题一：The Email field is required！

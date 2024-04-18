@@ -10,8 +10,7 @@
 
 ### 第一行: 方法定义
 
-```
-csharpCopy code
+```c#
 public void ConfigureContainer(ContainerBuilder builder)
 ```
 
@@ -19,8 +18,7 @@ public void ConfigureContainer(ContainerBuilder builder)
 
 ### 第二行: 初始化 MediatorBuilder
 
-```
-csharpCopy code
+```c#
 var mediatorBuilder = new MediatorBuilder()
 ```
 
@@ -28,8 +26,7 @@ var mediatorBuilder = new MediatorBuilder()
 
 ### 第三行: 注册处理器
 
-```
-csharpCopy code
+```c#
     .RegisterHandlers(typeof(Startup).Assembly)
 ```
 
@@ -43,8 +40,7 @@ csharpCopy code
 
 ### 第四行和第五行: 配置全局接收管道
 
-```
-csharpCopy code
+```c#
     .ConfigureGlobalReceivePipe(x =>
     {
         // x.UseUnitOfWork();
@@ -84,7 +80,7 @@ CreateHostBuilder(args).Build().Run();
 
 ### 第五行：创建宿主构建器
 
-```
+```c#
 public static IHostBuilder CreateHostBuilder(string[] args) =>
 ```
 
@@ -94,7 +90,7 @@ public static IHostBuilder CreateHostBuilder(string[] args) =>
 
 ### 第六至第十行：配置宿主
 
-```
+```c#
 Host.CreateDefaultBuilder(args)
     .UseServiceProviderFactory(new AutofacServiceProviderFactory())  // 设置使用 Autofac
     .ConfigureWebHostDefaults(webBuilder =>
@@ -109,13 +105,13 @@ Host.CreateDefaultBuilder(args)
 
 - `.UseServiceProviderFactory(new AutofacServiceProviderFactory())` 指定宿主应使用 Autofac 作为其服务提供者工厂。Autofac 是一个流行的依赖注入 (DI) 容器，它提供比 .NET 内置的服务容器更复杂和灵活的功能。
 
-- ```
+- ```c#
   .ConfigureWebHostDefaults(webBuilder => {...})
   ```
 
    配置应用程序将用作 web 服务器的默认参数。
 
-  ```
+  ```c#
   webBuilder
   ```
 
