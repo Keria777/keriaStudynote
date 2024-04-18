@@ -101,6 +101,129 @@ public class ProductService : IProductService {
 
   
 
+# 仓储模式
+
+**仓储模式（Generic Repository Pattern）**：通过定义**一个泛型接口来处理所有实体类型的数据操作**，从而减少重复代码并提升代码复用性。
+
+## 核心理念
+
+的是封装存储逻辑，使得应用程序不直接与数据访问逻辑交互，而是通过一个中介层（即仓储）来操作数据。这样做的好处包括：
+
+1. **解耦**：应用逻辑和数据访问逻辑分离，增加了代码的模块化。
+2. **可维护性**：集中数据访问逻辑使得维护和修改更加容易。
+3. **可测试性**：通过仓储接口，可以更方便地对业务逻辑进行单元测试，尤其是可以用模拟（Mocking）技术来替换实际的数据访问代码
+
+## 接口方法解析
+
+1. **基本 CRUD 操作**：
+   - `InsertAsync`, `UpdateAsync`, `DeleteAsync`：基础的增、改、删操作，适用于处理单个实体。
+   - `InsertAllAsync`, `UpdateAllAsync`, `DeleteAllAsync`：批量操作，适用于处理多个实体。
+2. **查询操作**：
+   - `GetByIdAsync`：通过ID获取单个实体。
+   - `GetAllAsync`, `ToListAsync`：获取所有实体或根据条件获取实体列表。
+   - `SingleOrDefaultAsync`, `FirstOrDefaultAsync`：根据指定条件查询单个实体。
+   - `AnyAsync`：检查是否存在任何符合条件的实体。
+   - `CountAsync`：计算符合条件的实体数量。
+3. **高级查询与批处理**：
+   - `SqlQueryAsync`：执行SQL查询并返回实体集合，适用于复杂查询。
+   - `Query`, `QueryNoTracking`：提供对数据库的查询能力，`QueryNoTracking` 用于只读场景，以提升性能。
+   - `BatchInsertAsync`, `BatchUpdateAsync`, `BatchDeleteAsync`：批量插入、更新和删除，这些操作用于处理大量数据，提高性能。
+4. **数据库访问**：
+   - `Database`：提供对底层数据库上下文的访问，以便执行那些不适合通过标准CRUD操作处理的任务。
+
+## 方法签名解析
+
+```c#
+ValueTask<TEntity?> GetByIdAsync<TEntity>(object id, CancellationToken cancellationToken = default)
+    where TEntity : class, IEntity;
+```
+
+1. **`ValueTask<TEntity?>`**：
+   - `ValueTask` 是 .NET 中的一个结构类型，用于封装一个可能已经完成的异步操作。它是 `Task` 的一个轻量级替代，用于提高性能，在异步操作频繁且结果立即可用的场景下尤其有用。这里的 `ValueTask` 返回一个 `TEntity` 类型的结果。
+   - `TEntity?` 表示返回的 `TEntity` 类型的对象是可空的（nullable），意味着如果没有找到对应的实体，则可能返回 `null`。
+2. **`GetByIdAsync<TEntity>`**：
+   - 这是一个泛型方法，`TEntity` 是方法的类型参数。这意味着该方法可以用于任何实现了 `IEntity` 接口的类的实例。
+   - 泛型使得该方法非常灵活，可以用于不同的实体类型，而不需要为每种实体类型编写重复的代码。
+3. **`object id`**：
+   - 这个参数是用于查找实体的标识符，它被定义为 `object` 类型，这使得方法可以接受任何类型的 ID，如 `int`、`Guid` 等，提高了方法的通用性。
+   - 通过将 ID 参数类型定义为 `object`，该方法可以适用于使用不同数据类型作为主键的实体。
+4. **`CancellationToken cancellationToken = default`**：
+   - `CancellationToken` 允许调用者可以通知该方法应该取消正在进行的工作。这是异步编程中的一种常见实践，用于提高应用程序的响应性和控制。
+   - `= default` 表示如果调用者没有提供一个具体的 `CancellationToken` 实例，方法会使用一个默认的 `CancellationToken`，即 `CancellationToken.None`，这意味着在默认情况下，操作不可被取消。
+5. **`where TEntity : class, IEntity`**：
+   - 这是一个泛型约束，它限定了 `TEntity` 必须是一个类，并且必须实现 `IEntity` 接口。
+   - `class` 约束确保了 `TEntity` 是一个引用类型，这是处理数据库实体的一种常见需求。
+   - `IEntity` 约束确保了 `TEntity` 至少具有 `IEntity` 接口定义的那些功能或属性，通常这包括了如实体的 ID 等基本属性，这样 `IRepository` 就可以正确地处理这些实体。
+
+### ValueTask和Task的区别
+
+- **选择 `Task`**：如果一个方法经常处于等待状态或不频繁调用，使用 `Task` 是比较好的选择。`Task` 的使用非常广泛，已经被优化用于处理大多数异步操作。
+
+- **选择 `ValueTask`**：如果你的方法在大多数情况下能同步返回结果，或者异步操作非常快就可以完成，那么 `ValueTask` 是一个更好的选择。此外，对于高频率调用的短小方法，`ValueTask` 可以减少内存分配，从而提高性能。
+
+  ### 查询操作（Read）
+
+  - **查询单个元素**（如 `GetByIdAsync`）：如果数据访问层能够在大多数情况下快速从缓存中检索数据，使用 `ValueTask` 可以是一个好选择，因为它可能直接同步返回结果。这种情况下，`ValueTask` 的性能优势最为明显。
+  - **查询多个元素**（如 `GetAllAsync` 或基于条件的查询）：这类操作通常涉及到更复杂的数据处理和可能的磁盘I/O操作，因此使用 `Task` 更为合适，因为它们不太可能同步完成，并且 `Task` 在处理这类操作时已经非常成熟和优化。
+
+  ### 修改和写入操作（Create, Update, Delete）
+
+  - **插入、更新、删除单个或少量记录**（如 `InsertAsync`, `UpdateAsync`, `DeleteAsync`）：虽然这些操作有时候可以快速完成，尤其是在涉及少量数据并且操作高效的数据库系统中，但它们通常涉及到磁盘I/O操作，这意味着它们更可能是异步的。因此，通常建议使用 `Task`。
+  - **批量插入、更新、删除**（如 `BatchInsertAsync`, `BatchUpdateAsync`, `BatchDeleteAsync`）：这类操作几乎总是涉及复杂的数据处理和I/O操作，建议使用 `Task`，因为它们不太可能同步完成。
+
+  > [!CAUTION]
+  >
+  > 通常，为了简化代码管理和避免潜在的错误，开发倾向于默认使用 `Task`，只在性能分析明确指出使用 `ValueTask` 有明显优势的情况下才考虑替换。
+
+  
+
+# EFCore数据库配置
+
+![image-20240418171006035](assets/image-20240418171006035.png)
+
+### 解析
+
+这段代码是在OnModeCreating中动态注册所有实现了IEntity接口的实体类。
+
+### 逻辑步骤分析
+
+1. **获取程序集中的所有类型**:
+
+   ```c#
+   typeof(PractiseForKeriaDbContext).GetTypeInfo().Assembly.GetTypes()
+   ```
+
+   这一行代码获取包含 `PractiseForKeriaDbContext` 类的程序集中定义的所有类型。`GetTypeInfo()` 和 `Assembly` 属性被用来访问当前类所在的程序集，而 `GetTypes()` 方法则返回这个程序集中定义的所有类型（包括类、接口等）。
+
+2. **筛选实现了 `IEntity` 接口的类**:
+
+   ```c#
+   .Where(t => t.IsAssignableTo(typeof(IEntity)) && t.IsClass)
+   ```
+
+   这个 LINQ 查询筛选出所有实现了 `IEntity` 接口的类。`IsAssignableTo(typeof(IEntity))` 检查一个类型是否可以赋值给 `IEntity` 类型，这包括直接实现了 `IEntity` 接口或间接继承自实现了该接口的基类的所有类。`t.IsClass` 确保只选择类（而非接口或结构体）。
+
+3. **转换为列表并遍历**:
+
+   ```c#
+   .ToList().ForEach(x =>
+   ```
+
+   `ToList()` 方法将筛选结果转换为列表，`ForEach` 是对列表中的每一个元素执行一段指定的操作。
+
+4. **动态注册实体类型**:
+
+   ```c#
+   {
+       if (modelBuilder.Model.FindEntityType(x) == null)
+           modelBuilder.Model.AddEntityType(x);
+   });
+   ```
+
+   在这个 `ForEach` 块中，对于列表中的每一个类型 `x`，首先检查它是否已经被注册到模型中。`modelBuilder.Model.FindEntityType(x)` 会搜索当前数据模型是否已包含该类型，如果返回 `null`，说明该类型尚未注册。`modelBuilder.Model.AddEntityType(x)` 则将未注册的类型添加到数据模型中。
+
+
+
 # 参考考核项目时遇到的问题
 
 ## 1.问题一：The Email field is required！
