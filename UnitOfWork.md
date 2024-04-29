@@ -241,3 +241,4 @@ private void RegisterMediator(ContainerBuilder builder)
 
 - **配置**：这段代码在全局接收管道中注册了`UnitOfWork`中间件，这样所有通过中介器的消息都会经过这个中间件。
 - **依赖注入**：使用`ContainerBuilder`来注册中介器和它的配置，确保所有依赖项都正确解析。
+

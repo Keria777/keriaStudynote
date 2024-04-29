@@ -213,3 +213,91 @@ CreateMap<Manager, ManagerDTO>().IncludeBase<Employee, EmployeeDTO>();
 
 这个例子中，`Manager` 继承自 `Employee`，并且通过 `IncludeBase` 方法，Automapper 自动应用了从 `Employee` 到 `EmployeeDTO` 的映射规则到 `Manager` 到 `ManagerDTO` 的映射中，避免了重复代码并保持了映射的一致性。
 
+## 实战
+
+### 把对象A的属性C映射到对象B的属性D
+
+1.创建实体
+
+```c#
+public class SourceA
+{
+    public int C { get; set; } // 假设C是一个int类型
+}
+
+public class DestinationB
+{
+    public int D { get; set; } // 假设D是一个int类型，映射目标
+}
+```
+
+2.定义映射关系
+
+```c#
+var config = new MapperConfiguration(cfg => {    
+  cfg.CreateMap<SourceA, DestinationB>()        
+    .ForMember(dest => dest.D, opt => opt.MapFrom(src => src.C)); });
+```
+
+3.使用AutoMapper进行对象映射
+
+```c#
+var source = new SourceA { C = 100 };
+var destination = mapper.Map<DestinationB>(source);
+```
+
+4.验证结果
+
+```c#
+Console.WriteLine(destination.D);  // 输出应该是100
+```
+
+
+
+### 把A对象映射到B对象，但是排除A对象的C属性
+
+1.定义实体
+
+```c#
+public class SourceA
+{
+    public int C { get; set; }  // 要被忽略的属性
+    public string X { get; set; }  // 其他属性
+    public double Y { get; set; }
+}
+
+public class DestinationB
+{
+    public string X { get; set; }  // 相应的属性
+    public double Y { get; set; }
+}
+```
+
+2.配置映射关系
+
+```c#
+// 创建Mapper配置
+var config = new MapperConfiguration(cfg => {
+    cfg.CreateMap<SourceA, DestinationB>()
+       .ForMember(dest => dest.X, opt => opt.MapFrom(src => src.X))
+       .ForMember(dest => dest.Y, opt => opt.MapFrom(src => src.Y))
+       .ForSourceMember(src => src.C, opt => opt.DoNotValidate());
+});
+
+// 使用配置创建Mapper对象
+var mapper = config.CreateMapper();
+```
+
+3.使用AutoMapper进行对象映射
+
+```c#
+var source = new SourceA { C = 100, X = "Hello", Y = 3.14 };
+var destination = mapper.Map<DestinationB>(source);
+```
+
+4.验证结果
+
+```c#
+Console.WriteLine($"X = {destination.X}, Y = {destination.Y}");  // 输出应该是 "X = Hello, Y = 3.14"
+```
+
