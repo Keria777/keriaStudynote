@@ -281,7 +281,7 @@ var config = new MapperConfiguration(cfg => {
     cfg.CreateMap<SourceA, DestinationB>()
        .ForMember(dest => dest.X, opt => opt.MapFrom(src => src.X))
        .ForMember(dest => dest.Y, opt => opt.MapFrom(src => src.Y))
-       .ForSourceMember(src => src.C, opt => opt.DoNotValidate());
+       .ForMember(src=>src.CreateAt,opt=>opt.Ignore());
 });
 
 // 使用配置创建Mapper对象
