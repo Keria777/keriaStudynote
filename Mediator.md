@@ -36,7 +36,7 @@ Install-Package Mediator.Net
 
 创建消息类和对应的处理器类。消息是你希望在应用程序中传递的数据对象；处理器是接收消息并执行相应操作的逻辑单元。
 
-```
+```c#
 using Mediator.Net.Contracts;
 
 public class SimpleMessage : IRequest
@@ -58,7 +58,7 @@ public class SimpleMessageHandler : IRequestHandler<SimpleMessage, Unit>
 
 在应用程序中配置中介者，并注册你定义的消息和处理器。
 
-```
+```c#
 using Mediator.Net;
 using Mediator.Net.Binding;
 

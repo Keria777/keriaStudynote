@@ -6,7 +6,7 @@
 
 **示例代码：**
 
-```
+```c#
 // 在 Startup.cs 中配置服务
 services.AddScoped<DbContext, MyDbContext>();
 
@@ -32,7 +32,7 @@ public class MyController : Controller
 
 **示例代码：**
 
-```
+```c#
 // 注册全局的日志记录器
 builder.RegisterType<Logger>().SingleInstance();
 
@@ -61,7 +61,7 @@ public class MyClass
 
 **示例代码：**
 
-```
+```c#
 // 定义日志记录器接口
 public interface ILogger
 {
@@ -108,7 +108,7 @@ public class MyController : ControllerBase
 
 
 
-```
+```c#
 var builder = new ContainerBuilder();
 builder.RegisterType<EmailSender>()
        .As<IEmailSender>()
@@ -119,7 +119,7 @@ builder.RegisterType<EmailSender>()
 
    
 
-```
+```c#
 builder.RegisterType<OrderProcessor>()
        .As<IOrderProcessor>();
 builder.RegisterType<ReceiptManager>()
@@ -132,7 +132,7 @@ var container = builder.Build();
 
 
 
-```
+```c#
 using(var transactionScope = container.BeginLifetimeScope("transaction"))
 {
   using(var orderScope = transactionScope.BeginLifetimeScope())
@@ -163,7 +163,7 @@ using(var transactionScope = container.BeginLifetimeScope("transaction"))
 
 **示例代码：**
 
-```
+```c#
 // 定义一个长期存在的身份认证服务接口
 public interface IAuthenticationService
 {

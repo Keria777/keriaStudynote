@@ -13,7 +13,7 @@
 
 下面是一个使用 C# 反射的简单示例，演示如何使用 `Type` 类来获取类型信息，并调用方法：
 
-```
+```c#
 using System;
 using System.Reflection;
 
@@ -63,7 +63,7 @@ public class MyClass
 
 简单的线程创建和启动示例：
 
-```
+```c#
 using System;
 using System.Threading;
 
@@ -105,7 +105,7 @@ public class ThreadDemo
 
   - 然后，我们在主类中使用匿名内部类来实现这个接口
 
-  - ```
+  - ```c#
     public class Test {
         public static void showMessage(String message) {
             System.out.println(message);
@@ -134,7 +134,7 @@ public class ThreadDemo
 
   - 
 
-  ```
+  ```c#
   public delegate void Action(string message); // 委托定义
   
   public class Program
@@ -169,7 +169,7 @@ public class ThreadDemo
 
 示例：Lambda 表达式和 LINQ
 
-```
+```c#
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -207,7 +207,7 @@ public class Program
 
 示例1：
 
-```
+```c#
 using System;
 using System.Threading.Tasks;
 
@@ -239,7 +239,7 @@ public class Program
 
 在一个方法的长时间等待过程中开始执行另一个较短的等待方法，并确保短时间的方法先完成
 
-```
+```c#
 using System;
 using System.Threading.Tasks;
 

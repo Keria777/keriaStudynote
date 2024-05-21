@@ -47,8 +47,7 @@ var mediatorBuilder = new MediatorBuilder()
 
 ### 第六行: 注册中介者到 Autofac
 
-```
-csharpCopy code
+```c#
 builder.RegisterMediator(mediatorBuilder);
 ```
 

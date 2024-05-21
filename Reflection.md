@@ -12,7 +12,7 @@
 
 以下是一个简单的 C# 示例，展示如何使用反射来获取类型信息，创建对象，调用方法，以及访问字段和属性：
 
-```
+```c#
 using System;
 using System.Reflection;
 

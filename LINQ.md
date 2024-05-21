@@ -24,7 +24,7 @@ LINQ（Language Integrated Query）是一种集成在 .NET 语言中（主要是
 
 ### 示例：使用 LINQ to Objects
 
-```
+```c#
 List<int> numbers = new List<int> { 1, 2, 3, 4, 5 };
 var evenNumbers = from num in numbers
                   where num % 2 == 0

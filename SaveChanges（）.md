@@ -26,8 +26,7 @@
 
 假设您在同一个业务操作中添加多个学生记录：
 
-```
-csharpCopy code
+```c#
 public void AddStudents(IEnumerable<Student> students)
 {
     foreach(var student in students)
