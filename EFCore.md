@@ -1,6 +1,46 @@
+# 简介，操作方式
+
 全称：EntityFrameworkCore
 
 Entity Framework Core（EF Core）是一个流行的、开源的、轻量级、可扩展的数据访问技术，由微软开发。它是传统 Entity Framework 的下一代版本，但是完全重写，以提供更好的性能和更高的灵活性。EF Core 是一个对象关系映射（ORM）框架，它允许开发者使用 .NET 对象来操作数据库，而无需写大量的 SQL 代码。
+
+可以用面向对象的方式来操作数据库。有DBFirst、ModelFirst、CodeFirst三种模式，EF与实体映射的原理是反射。EF操作数据库大致有三步：
+
+1.封装了数据库的统一入口，EF上下文；
+
+2.把对实体的操作放入上下文中；
+
+3.把对实体操作产生的变化生成Sql脚本执行到数据库中；
+
+
+
+# 核心概念：状态跟踪
+
+状态跟踪是EF对操作数据库的一种优化, 主要思想是:把所有的model都进行状态跟踪, 这样就不用时刻把修改的操作更新到数据库，进而降低了数据库的压力。需要进行数据库更新的状态有：Added、Modified、Detached
+
+EF的实体状态总共有5种：Added、Deleted、Modified、Detached、unChanged
+
+①. **unChanged**：属性值与数据库中属性值相同，没有发生任何变化，首次查询出来的实体的状态值为unChanged
+
+②. **Modified**：实体中的某些属性的值或所有属性值与数据库中的发生了变化
+
+A：从数据库中查询出来的实体，直接改实体属性的值, 可以将实体状态改为 Modified。
+
+B：自己创建的实体，必须先Attach一下，直接改实体属性的值，才可以将实体状态改为 Modified。
+
+③. **Added**: 实体将由上下文跟踪，但是在数据库中还不存在,
+
+Add()和 AddRange方法可以将实体状态变为：Added
+
+④. **Deleted**:实体将由上下文跟踪并存在于数据库中，但是已被标记为在下次调用 SaveChanges 时从数据库中删除。
+
+A：从数据库中查询出来的实体，通过Remove方法, 可以将实体状态改为 Deleted。
+
+B：自己创建的实体，必须先Attach一下，然后Remove方法，才可以将实体状态改为 Deleted。
+
+⑤. **Detached**: 调用AsNoTracking方法，取消实体状态追踪
+
+https://blog.csdn.net/sinolover/article/details/104278942
 
 # 核心功能
 
@@ -197,4 +237,38 @@ public class Student
 ```
 
 在这种情况下，EF Core找不到符合命名规则的字段，就会使用属性的getter和setter方法来访问`Name`属性的值。
+
+
+
+# 其他内容
+
+## Dapper与EF的区别
+
+**Dapper** ： 开源的轻量级ORM框架，最大的优点就是执行效率快，因为它是直接对ADO.NET的Connection连接对象进行了扩展。
+
+1. EF不用写sql,开发效率比较高,但是执行效率比Dapper低
+
+2. Dapper 必须写sql,因为是基于ado.net, 所以执行效率很高
+
+   
+
+## SqlServer和MySql的区别
+
+1. SQL Server 主要运行Windows下面, 是闭源的,相对可靠,安全性较好,但是比较昂贵,是微软的数据库产品。
+
+2. Mysql体积小、相对便宜、开源，尤其是开放源码，跨平台（window、linux都可以用）。是甲骨文（Oracle）公司的数据库产品
+
+3. 两者语法不同：比如返回指定几行记录
+
+   - Sqlserver用Top；  		MySql用 limit返回当前时间；
+
+   - Sqlserver用getdate() ；	MySql用now()；
+
+4. 开发公司不同
+
+   - SQLserverr是Microsoft（微软）的产品。
+
+   - Mysql是 Oracle（甲骨文） 公司的产品
+
+
 
