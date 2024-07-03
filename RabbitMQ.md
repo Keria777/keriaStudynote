@@ -12,27 +12,27 @@ RabbitMQ的作用包括：
 
 1. 解耦：RabbitMQ允许应用程序通过消息传递进行解耦。生产者和消费者之间不存在直接的依赖关
 
-系，它们只需要知道如何与消息队列进行交互即可。
+​	系，它们只需要知道如何与消息队列进行交互即可。
 
 2. 异步通信：应用程序可以通过将消息发送到消息队列中实现异步通信。生产者将消息发送到队列后
 
-立即返回，而不需要等待消费者的响应。
+​	立即返回，而不需要等待消费者的响应。
 
 3. 削峰填谷：当生产者的速度超过消费者时，RabbitMQ可以帮助缓冲和平衡消息的流量，从而避免
 
-系统过载。
+​	系统过载。
 
 4. 可靠性传输：RabbitMQ提供了多种机制来确保消息的可靠传输，包括持久化、消息确认和事务机
 
-制等。
+​	制等。
 
 5. 消息路由和转发：RabbitMQ支持灵活的消息路由机制，可以根据不同的规则将消息路由到指定的
 
-队列或交换机。
+​	队列或交换机。
 
 6. 扩展性和高可用性：通过构建RabbitMQ集群，可以实现高可用性和可扩展性，确保系统在节点故
 
-障时仍能正常运行。
+​	障时仍能正常运行。
 
 总之，RabbitMQ是一个功能强大的消息队列中间件，广泛应用于微服务架构、分布式系统、异步任务
 
@@ -158,9 +158,254 @@ Exchange）、扇形交换机（Fanout Exchange）和头交换机（Headers Exch
 - ​	如果不存在，则正常消费，消费完毕后写入redis/db。
 - ​	如果存在，则证明消息被消费过，直接丢弃。
 
+
+
 # RabbitMQ的优缺点
 
 
 
 ![image-20240527150631759](assets/image-20240527150631759.png)
+
+
+
+
+
+# 实战
+
+
+
+## 安装RabbitMQ等
+
+
+
+1. macOS安装rabbitMQ通常推荐用Homebrew安装。打开终端，首先安装Homebrew：
+
+```
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+过程可能会出现错误，
+
+```
+fatal: unable to access 'https://github.com/Homebrew/brew/': Failed to connect to github.com port 443 after 75020 ms: Couldn't connect to server
+```
+
+出现错误参考这个文档：https://www.cnblogs.com/mizhifei/p/16558406.html
+
+2. 安装Homebrew成功后
+
+   ```
+   (echo; echo 'eval "$(/opt/homebrew/bin/brew shellenv)"') >> /Users/keria/.zprofile
+   ```
+
+3. 立即加载新的环境变量
+
+   ```
+   eval "$(/opt/homebrew/bin/brew shellenv)"
+   ```
+
+4. 验证Homebrew是否安装成功
+
+   ```
+   brew help
+   ```
+
+5. 接下来开始安装rabbitMQ
+
+   ```
+   brew install rabbitmq
+   ```
+
+6. 启动rabbitMQ
+
+   ```
+   brew services start rabbitmq
+   ```
+
+7. 启用rabbitMQ管理插件
+
+   ```
+   rabbitmq-plugins enable rabbitmq_management
+   ```
+
+8. 重启rabbitMQ
+
+   ```
+   brew services restart rabbitmq
+   ```
+
+9. 访问本地管理控制台，用户名和密码都是 guest
+
+   http://localhost:15672
+
+
+
+### 成功后显示页面
+
+![image-20240703095731621](assets/image-20240703095731621.png)
+
+#### 页面介绍
+
+- 六个选项卡
+
+  - Overview：这里可以概览 RabbitMQ 的整体情况，如果是集群，也可以查看集群中各个节点的情况。包括 RabbitMQ 的端口映射信息等，都可以在这个选项卡中查看。
+  - Connections：这个选项卡中是连接上 RabbitMQ 的生产者和消费者的情况。
+  - Channels：这里展示的是“通道”信息，关于“通道”和“连接”的关系。
+  - Exchange：这里展示所有的交换机信息。
+  - Queue：这里展示所有的队列信息。
+  - Admin：这里展示所有的用户信息。
+- 右上角是页面刷新的时间，默认是 5 秒刷新一次，展示的是所有的 Virtual host
+
+原文链接：https://blog.csdn.net/weixin_37833693/article/details/138725027
+
+
+
+## 练手Demo（简单模式）
+
+只有一个生产者，一个消费者队列。接收消息时只需要制定队列名，不需要制定发送到哪个Exchange。RabbitMQ会自动使用Virtual Host默认的Exchange
+
+1. 创建两个csproj，一个Producer，一个Consumer。安装RabbitMQ.Client 包，版本不要太高，6.2.1就好好了
+
+   ```
+   dotnet add package RabbitMQ.Client
+   ```
+
+2. Producer
+
+   ![image-20240703105116407](assets/image-20240703105116407.png)
+
+​	`ConnectionFactory`：创建与 RabbitMQ 服务器连接的工厂。这里指定了 `HostName` 为 `localhost`，表示	连接到本地的 RabbitMQ 服务器。
+
+​	`CreateConnection()`：使用连接工厂创建一个连接。
+
+​	`CreateModel()`：使用连接创建一个通道（channel）。通道是与 RabbitMQ 服务器进行通信的主要方式。
+
+​	`QueueDeclare` 方法用于声明一个队列。如果队列不存在，则创建它。参数 `queue` 指定队列的名称。
+
+`durable` 设置为 `false` 表示队列不是持久化的（服务器重启后不会保留）。`	exclusive` 设置为 `false` 表示队
+
+列不是排他性的。`autoDelete` 设置为 `false` 表示队列不会自动删`arguments` 设置为 `null` 表示没有其他参
+
+数。
+
+​	`Encoding.UTF8.GetBytes` 方法将消息文本转换为字节数组。
+
+​	`BasicPublish` 方法用于发送消息到指定的队列。`exchange` 设置为空字符串，表示使用默认交换机。
+
+`routingKey` 指定队列的名称（在这种情况下为 "hello"）。`basicProperties` 设置为 `null`，表示没有指定其他
+
+属性。`body` 是消息的字节数组。
+
+3. Consumer
+
+   ![image-20240703105832598](assets/image-20240703105832598.png)
+
+- ​	创建连接工厂、连接、通道、声明队列操作都一样
+
+- ​	`EventingBasicConsumer` 类用于创建一个事件驱动的消费者。
+
+- ​	`Received` 事件在消费者接收到消息时触发。`ea.Body.ToArray` 获取消息的字节数组。
+
+- `Encoding.UTF8.GetString` 将字节数组解码为字符串。
+
+- ​	开始消费消息：`BasicConsume` 方法用于开始从指定队列中消费消息。`queue` 指定队列的名称。`autoAck` 设置为 `true` 表示自动确认消息。`consumer` 是要使用的消费者。
+
+- ​	`Console.WriteLine ()` 和 `Console.ReadLine ()`  两行代码时应用程序保持运行，直到按下回车键，
+  从而保持消费者持续监听队列中的消息。
+
+  
+
+3. 运行并打开管理界面：
+
+![image-20240703111021873](assets/image-20240703111021873.png)
+
+
+
+## 进阶Demo 发布/订阅模式（Pub/Sub）
+
+通过交换机来路由消息到多个队列，并让多个消费者处理这些消息。
+
+使用 `fanout` 交换机类型。`fanout` 交换机会将接收到的消息广播到所有绑定到它的队列。
+
+1. Publisher
+
+   ![image-20240703112002967](assets/image-20240703112002967.png)
+
+   ```
+   channel.ExchangeDeclare(exchange: "logs", type: "fanout");
+   ```
+
+    声明一个名为logs的fanout类型的交换机，表示这是一个广播交换机，消息会被发送到所有绑定到该交换机的队列。
+
+   
+
+2. Subscriber1
+
+   ![image-20240703112032698](assets/image-20240703112032698.png)
+
+   比之前的练手Demo类的Cosumer类多了一个创建交换机并将队列绑定到交换机的动作
+
+   
+
+3. Subscriber2
+
+![image-20240703112053166](assets/image-20240703112053166.png)
+
+4. 运行项目验证
+
+   出现声明的logs交换机
+
+   ![image-20240703113240872](assets/image-20240703113240872.png)
+
+​	查看Queues队列，可以看到生产者和两个消费者创建的队列
+
+​		随机生成的临时队列名（每个消费者一个临时队列）
+
+![image-20240703113535230](assets/image-20240703113535230.png)
+
+​	查看Connections连接标签，可以看到生产者和两个消费者的连接
+
+​	![image-20240703114051259](assets/image-20240703114051259.png)
+
+
+
+## 进阶Demo 主题交换机（Topic Exchange）
+
+使用主题交换机根据消息的路由键进行消息路由。
+
+创建多个消费者，每个消费者订阅不同的主题模式。
+
+展示如何利用路由键和绑定键实现复杂的消息过滤。
+
+项目结构：
+
+​	`Publisher` 项目：负责发送消息
+
+​	`SubscriberError` 项目：负责接收错误日志
+
+​	`SubscriberInfo` 项目：负责接收信息日志
+
+​	`SubscriberAll` 项目：负责接收所有日志
+
+1. TopicPublisher
+
+   ![image-20240703143106407](assets/image-20240703143106407.png)
+
+2. SubscriberError
+
+   ![image-20240703143627113](assets/image-20240703143627113.png)
+
+   ​	`SubscriberError` 绑定键为 `*.error`，接收所有路由键中第二部分是 `error` 的消息。
+
+3. SubscriberInfo
+
+   ![image-20240703143652100](assets/image-20240703143652100.png)
+
+   ​	`SubscriberInfo` 绑定键为 `*.info`，接收所有路由键中第二部分是 `info` 的消息。
+
+   4. SubscriberAll
+   
+      ![image-20240703143724701](assets/image-20240703143724701.png)
+
+​		`SubscriberAll` 绑定键为 `#`，接收所有消息。
 
