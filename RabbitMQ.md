@@ -409,3 +409,118 @@ fatal: unable to access 'https://github.com/Homebrew/brew/': Failed to connect t
 
 ​		`SubscriberAll` 绑定键为 `#`，接收所有消息。
 
+
+
+## 延迟队列Demo
+
+延迟队列就是用到了死信交换机和TTL（消息存活时间）实现的。
+如果消息超时未消费就会变成死信，在RabbitMQ中如果消息成为死信，队列可以绑定一个死信交换机，在死信交换机上可以绑定其他队列，在我们发消息的时候可以按照需求指定TTL的时间，这样就实现了延迟队列的功能了。
+RabbitMQ有一种方式可以实现延迟队列，在RabbitMQ中安装一个死信插件，这样更方便一些，我们只需要在声明交互机的时候，指定这个就是死信交换机，然后在发送消息的时候直接指定超时时间就行了，相对于死
+信交换机+TTL要省略了一些步骤。
+
+#### 安装延迟插件
+
+1. 到github上下载delay插件
+
+   https://github.com/rabbitmq/rabbitmq-delayed-message-exchange/releases
+
+   ![image-20240704103214185](assets/image-20240704103214185.png)
+
+2. 进入mac终端 查看rabbitMQ的安装目录
+
+```
+brew list rabbitmq
+```
+
+![image-20240704103117893](assets/image-20240704103117893.png)
+
+3. 复制下载好的插件放到plugins目录下
+
+   ![image-20240704103516649](assets/image-20240704103516649.png)
+
+4. 在plugins目录下执行安装命令
+
+   ```
+   rabbitmq-plugins enable rabbitmq_delayed_message_exchange
+   ```
+
+​	出现以下内容就算成功
+
+​	![image-20240704103704360](assets/image-20240704103704360.png)
+
+
+
+此时出现一个问题，出现了这个成功的界面
+
+![image-20240704111815936](assets/image-20240704111815936.png)
+
+但是管理界面却没有出现delay交换机。
+
+查看自己的rabbitMQ日志
+
+tail -f /opt/homebrew/var/log/rabbitmq/rabbit@localhost.log
+
+![image-20240704112129166](assets/image-20240704112129166.png)
+
+没有看到任何与 `rabbitmq_delayed_message_exchange` 插件相关的特定错误或信息。
+
+
+
+原因是我启用的rabbitMQ是docker安装的不是Homebrew安装的。重头来一次！
+
+![image-20240704143334311](assets/image-20240704143334311.png)
+
+1. 使用curl下载插件（插件的版本号一定要跟rabbitMQ兼容）
+
+   ```
+   curl -LO https://github.com/rabbitmq/rabbitmq-delayed-message-exchange/releases/download/v3.13.0/rabbitmq_delayed_message_exchange-3.13.0.ez
+   ```
+
+2. 将下载的 `.ez` 文件复制到 Docker 容器中
+
+   ```
+   docker cp rabbitmq_delayed_message_exchange-3.13.0.ez rabbitmq_management:/plugins/
+   ```
+
+3. 进入Docker容器
+
+   ```
+   docker exec -it rabbitmq_management bash
+   ```
+
+4. 启用插件
+
+   ```
+   mv /plugins/rabbitmq_delayed_message_exchange-3.11.1.ez /usr/lib/rabbitmq/lib/rabbitmq_server-3.11.1/plugins/
+   rabbitmq-plugins enable rabbitmq_delayed_message_exchange
+   ```
+
+5. 确认插件已经启用
+
+   ```
+   rabbitmq-plugins list
+   ```
+
+   ![image-20240704143606198](assets/image-20240704143606198.png)
+
+6. 此时rabbitMQ管理界面进入交换机页面，多了一个选项，说明真正成功了
+
+   ![image-20240704143708569](assets/image-20240704143708569.png)
+
+
+
+#### 开始Demo
+
+1. DelayProducer代码
+
+   ![image-20240704144457362](assets/image-20240704144457362.png)
+
+2. DelayConsumer代码
+
+   ![image-20240704144514780](assets/image-20240704144514780.png)
+
+3. 首先运行消费者，然后再运行生产者，从控制台可以看到，接收消息延迟了5秒。
+
+   ![image-20240704144600236](assets/image-20240704144600236.png)
+
+​	![image-20240704144626249](assets/image-20240704144626249.png)
