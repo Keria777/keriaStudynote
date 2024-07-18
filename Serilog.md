@@ -1,3 +1,14 @@
+        Log.Logger = new LoggerConfiguration()
+            //添加一些日志富集器（enrichers），以便在日志中包含环境名称和机器名等信息。
+            .Enrich.FromLogContext()//从日志上下文中获取信息
+            .Enrich.WithEnvironmentName()//添加环境名称
+            .Enrich.WithMachineName()//添加机器名
+            //定义日志的输出目标（sinks），包括控制台、文件和 Seq
+            .WriteTo.Console()
+            .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day)
+            .WriteTo.Seq("http://localhost:5341")//将日志输出到Seq
+            .CreateLogger();
+
 # 入门案例
 
 1. 首先，确保项目中已经安装了 Serilog 的 NuGet 包：

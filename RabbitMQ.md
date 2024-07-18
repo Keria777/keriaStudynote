@@ -77,7 +77,7 @@ Exchange）、扇形交换机（Fanout Exchange）和头交换机（Headers Exch
 
 
 
-## **RabbitMQ**有几种工作模式
+## **RabbitMQ**有几种工作模式/应用场景
 
 1.**simple**模式（即最简单的收发模式）
 
