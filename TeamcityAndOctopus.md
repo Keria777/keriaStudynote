@@ -1,6 +1,93 @@
 # 本地CI
 
+## Build And Test
 
+### Build
+
+#### 第一步：拉取 Agent 镜像
+
+Pull Jetbrains官方 TeamCity-Agent 镜像，其中自带一些运行环境如 .Net SDK 6.0.x，但是后续测试项目使用的是 8.0的SDK，需要额外安装环境。
+
+```
+docker pull jetbrains/teamcity-agent
+```
+
+#### 第二步：自定义镜像
+
+由于默认的Agent镜像运行后无法切换到root账号，所以手动创建一个基于Agent的镜像，切换到root，同时提前安装一些工具软件。
+
+新建文件夹，创建 DockerFile文件，内容如下：
+
+```
+##基于官方TeamCity代理镜像
+
+FROM jetbrains/teamcity-agent
+
+##设置环境变量
+
+ENV docker.server.version=25.0.3
+
+##切换到root用户以进行安装
+
+USER root
+
+##设置root用户密码
+
+RUN echo "root:root" | chpasswd
+
+##更新包列表并安装sudo和vim
+
+RUN apt-get update && apt-get install -y sudo vim
+
+##切换回teamcity-agent用户
+
+USER teamcity
+
+##确保Agent能够正常启动
+
+RUN mkdir -p /opt/teamcity-agent/logs
+
+
+```
+
+#### 第三步：编译镜像文件
+
+CD到含DockerFile文件夹，执行编译镜像命令
+
+```
+docker build -t custom-teamcity-agent-test .
+```
+
+#### 第四步：运行自定义镜像容器(我用的是MAC内置的agent，这里用的不是这行命令，命令在个人理解tag里)
+
+使用自定义镜像创建容器
+
+```
+docker run -d -e SERVER_URL="<此处填写TeamCity地址>:<端口号>" --name="teamcity-agent-test" custom-teamcity-agent-test
+```
+
+`-e SERVER_URL` 参数是必须要指定TeamCity地址的，否则容器无法运行。
+
+#### 第五步：安装额外环境
+
+进入容器终端，安装 .NET SDK，配置环境
+
+```
+docker exec -it <容器ID> /bin/bash
+
+# 进入终端后，分别执行安装 SDK 8.0 9.0
+curl -sSL https://dotnet.microsoft.com/download/dotnet/scripts/v1/dotnet-install.sh | bash /dev/stdin --channel 8.0 --install-dir /usr/share/dotnet
+
+curl -sSL https://dotnet.microsoft.com/download/dotnet/scripts/v1/dotnet-install.sh | bash /dev/stdin --channel 9.0 --install-dir /usr/share/dotnet
+```
+
+#### 第六步：重启容器
+
+重新启动Agent容器，TeamCity正常识别 .Net SDK 8.0 和 9.0
+
+
+
+###  个人理解
 
 ![image-20241004095049310](assets/image-20241004095049310.png)
 
@@ -10,7 +97,7 @@
 
 
 
-
+#### 注意
 
 如果 TeamCity 服务器和 Agent 容器运行在同一台主机上，可以尝试将 `localhost` 替换为 `host.docker.internal`：
 
@@ -18,9 +105,153 @@
 docker run -d -e SERVER_URL="http://host.docker.internal:8111" --name="teamcity-agent-test" custom-teamcity-agent-test
 ```
 
+上面这行命令还是不太行，需要重新运行一个容器，把/var/run/docker.sock:/var/run/docker.sock**套接字**挂载到agent的容器里。不然会报unix:///var/run/docker.sock. Is the docker daemon running?错误
+
+```
+docker run -d -e SERVER_URL="http://host.docker.internal:8111" \
+  --name="teamcity-agent-test2" \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  custom-teamcity-agent-test
+```
+
 `host.docker.internal` 是 Docker 提供的主机名，用于在 Docker 容器中访问主机的 IP 地址。
 
 
+
+#### 什么是套接字？
+
+##### Docker 套接字（Docker Socket）
+
+- **定义**：Docker 套接字（通常是 `/var/run/docker.sock`）是 Docker 与其客户端（如命令行工具或 API）之间进行通信的接口。
+- **作用**：它允许容器内的应用程序与 Docker 引擎进行交互，比如创建、启动、停止容器，或构建新镜像。
+
+##### 为什么需要挂载 Docker 套接字
+
+1. **动态操作**：当你的 CI/CD 工具（比如 TeamCity）在构建过程中需要创建新的容器（比如运行测试或构建服务）时，它需要与 Docker 引擎进行通信。
+2. **共享 Docker 环境**：通过挂载 Docker 套接字，容器内的程序就可以直接运行 Docker 命令，像在宿主机上一样操作 Docker。这意味着 CI/CD 工具可以在运行构建时动态地管理容器。
+
+##### 举个例子
+
+- **没有挂载的情况**：如果你的 CI/CD 工具没有访问 Docker 套接字的权限，它就无法创建或管理容器，只能在已经存在的容器中运行代码。
+- **挂载的情况**：当你挂载 Docker 套接字后，CI/CD 工具就可以执行诸如 `docker build`、`docker run` 等命令，来创建和启动新的容器。这使得自动化流程更加灵活和强大。
+
+##### 套接字的意义
+
+- **套接字**是一个用于进程间通信的机制，可以理解为一种“信道”，允许一个程序向另一个程序发送数据。在这里，它是 Docker 客户端和 Docker 服务端之间的通信渠道。
+
+
+
+
+
+### Test
+
+上述已经可以Build成功了，接下来需要Test也成功
+
+### 第一步：容器内安装Mysql 
+
+项目需要数据库环境为 `Mysql 8.0` 及以上，那么首先进入 `Agent` 容器的终端，先安装 `mysql-server`。
+
+```
+# 进入容器
+docker exec -it <容器ID> /bin/bash
+```
+
+```
+# 由于自定义镜像，默认切换为root账号，所以不需要提权操作
+apt update
+apt install mysql-server
+apt install mysql-client
+```
+
+```
+# 上述安装完成后，启动数据库
+service mysql restart
+```
+
+
+
+### 第二步：配置
+
+输入命令，配置数据库环境，设置一下密码的校验，移除匿名访问，允许 `root` 远程访问。
+
+```
+# 此命令为配置Mysql，回车后可能会要求你输入当前系统账号密码，我设置的密码是123456
+mysql_secure_installation
+
+# 后续配置项，提示输入语句如下：
+Press y|Y for Yes, any other key for No: <此处是你的输入>
+```
+
+以下是配置流程
+
+```
+# 是否启用校验密码组件
+Would you like to setup VALIDATE PASSWORD component?
+Press y|Y for Yes, any other key for No: <此处输入 y 启用>
+```
+
+```
+# 随后提示选择其中一个校验级别，分别为：LOW、MEDIUM、STRONG
+There are three levels of password validation policy:
+Please enter 0 = Low，1 = MEDIUM，2 = STRONG: <此处输入 0 回车最低级别>
+```
+
+```
+# 可能会出现设置数据库 root 密码步骤，只是编译环境，设置个简单密码就行
+New Password: <输入 123456 密码>
+Re-enter new password: <重复输入>
+```
+
+```
+# 是否移除匿名访问
+Remove anonymous users? 
+(Press y|Y for Yes, any other key for No): <此处输入 y 回车移除>
+```
+
+```
+# 是否禁用 root 的远程登录
+Disallow root login remotely？
+(Press y|Y for Yes, any other key for No): <此处输入 n 回车取消禁用>
+```
+
+```
+# 删除 test 数据库
+Remote test database and access to it?
+(Press y|Y for Yes, any other key for No): <此处输入 y 回车删除>
+```
+
+```
+# 是否重新加载配置
+Reload privilege tables now?
+(Press y|Y for Yes, any other key for No): <此处输入 y 回车重新加载>
+```
+
+配置完毕。连接数据库，二次配置。
+
+```
+# 连接
+mysql -u root -p
+
+# 选择mysql数据库
+use mysql;
+
+# 修改密码复杂度
+set global validate_password.policy=0;
+set global validate_password.length=1;
+
+# 如果想修改root密码，可以输入这个语句
+alter user 'root'@'localhost' identified with mysql_native_password by '123456';
+
+# 退出数据库
+exit;
+```
+
+重新启动数据库，加载改动。
+
+```
+# 上述配置完成后，重新启动数据库
+service mysql restart
+```
 
 
 
@@ -44,11 +275,58 @@ docker run --rm -v "/Users/keria/Desktop/myExamTopic/PractiseForKeria/PractiseFo
 
 再在TeamCity上build step 配置一个Command Line ： script里填 `gitversion /output buildserver`
 
+Parameters:
+![image-20241101095426168](assets/image-20241101095426168.png)
 
 
 
+## Containerization Build
 
-## Container Build
+### 配置Build Step和Parameters
+
+### Build Step
+
+Command Line - Git Version
+
+```
+gitversion /output buildserver /updateassemblyinfo true
+```
+
+Docker - Docker Login
+
+```
+--username=%docker.user% --password=%docker.password%
+```
+
+Command Line - Docker Build Image
+
+```
+repository=$(echo $BUILD_NUMBER | sed 's^+^-^g')
+
+docker build -f WebApiDockerfile -t %docker.tag%:$repository .
+```
+
+Command Line - Docker Push Image
+
+```
+repository=`echo %build.number%|sed 's^+^-^g'`
+
+docker push %docker.tag%:$repository
+```
+
+Command Line - Docker Remove
+
+```
+repository=`echo %build.number%|sed 's^+^-^g'`
+
+docker rmi %docker.tag%:$repository
+```
+
+### Parameters
+
+![image-20241101113911326](assets/image-20241101113911326.png)
+
+
 
 ### docker.server.version这个配置有坑
 
@@ -117,6 +395,12 @@ docker run --rm -v "/Users/keria/Desktop/myExamTopic/PractiseForKeria/PractiseFo
    ![image-20241008140120073](assets/image-20241008140120073.png)
 
 
+
+## 最终CI成果截图
+
+这里Containerization没配gitVersion，不影响
+
+![image-20241101113941738](assets/image-20241101113941738.png)
 
 
 
