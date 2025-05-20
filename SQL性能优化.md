@@ -172,3 +172,5 @@ JOIN sys.dm_db_missing_index_group_stats AS ddmigs
 > [!CAUTION]
 >
 > 这个缺失信息只是作参考，并不能完全按照这个信息去创建索引
+
+![image-20250520160544591](assets/image-20250520160544591.png)
