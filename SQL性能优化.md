@@ -2,7 +2,7 @@
 
 
 
-## 一、EF Core 中的查询等价 SQL
+## 一、🧠延迟执行（Deferred Execution）
 
 ![image-20250520150529628](assets/image-20250520150529628.png)
 
@@ -35,11 +35,7 @@ SELECT PurchasingDocumentNumber FROM StockTransferOrderInItem WHERE PurchasingDo
 
 若使用 AutoMapper 或 DTO，可以使用 `.ProjectTo<DtoType>(mapperConfig)` 进一步优化字段选择。
 
-------
-
-
-
-## 二、🧠延迟执行（Deferred Execution）
+## 
 
 `IQueryable<T>` 是**延迟执行**（Lazy Evaluation）的，拼接的 `Where`、`Select`、`OrderBy` 等操作不会立即查询数据库，而是构建一个 SQL 查询的表达式树：
 
@@ -58,7 +54,7 @@ SELECT PurchasingDocumentNumber FROM StockTransferOrderInItem WHERE PurchasingDo
 
 
 
-## 三、SQL 操作性能分析
+## 二、SQL 操作性能分析
 
 ### 1. 查询性能
 
@@ -77,7 +73,7 @@ SELECT PurchasingDocumentNumber FROM StockTransferOrderInItem WHERE PurchasingDo
 
 
 
-## 四、索引优化
+## 三、索引优化
 
 ![image-20250520110130453](assets/image-20250520110130453.png)
 
@@ -142,7 +138,45 @@ SELECT PurchasingDocumentNumber FROM StockTransferOrderInItem WHERE PurchasingDo
 
 
 
-## 五、SQL Server动态管理视图（DMV）查询索引缺失
+### 5.回表查询（Lookup）原理与优化
+
+> ❓什么是回表（Key Lookup）？
+
+当使用**非聚集索引**进行查询时，如果查询的字段**不在索引中**，数据库必须回到**聚集索引（主键）或堆表中，补全其余字段 —— 这个过程称为回表（Key Lookup）**。
+
+#### 🧩 产生条件：
+
+- 查询使用了 **非聚集索引**
+- 查询字段中包含了 **不在索引定义中的列**
+
+#### 🧱 示例：
+
+```sql
+SELECT * FROM StockTransferOrderInItem WHERE PurchasingDocumentNumber = '12345'
+```
+
+若只建了索引：
+
+```sql
+CREATE NONCLUSTERED INDEX idx_PoNumber ON StockTransferOrderInItem(PurchasingDocumentNumber)
+```
+
+因为 `SELECT *` 需要其他字段，所以必须通过 `PurchasingDocumentNumber` 找到对应的行号，再去主键索引中做 `Key Lookup` 回表。
+
+#### 🔍 执行计划中表现为：
+
+- 先执行 `Index Seek`
+- 紧跟着一个 `Key Lookup`（也叫 `Clustered Index Seek`）
+
+![image-20250523105355051](assets/image-20250523105355051.png)
+
+**若使用idx_PoNumber_itemCode_ItemNumber索引**
+
+**select PurchasingDocumentNumber,materialNumber,itemNumber则可避免回表查询**
+
+
+
+## 四、SQL Server动态管理视图（DMV）查询索引缺失
 
 以下 SQL 可查询 SQL Server 的缺失索引建议：
 
